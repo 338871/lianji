@@ -1,0 +1,7 @@
+.DS_Store
+Thumbs.db
+*.log
+android/keystore/
+android/build/
+android/build-apk.ps1
+dist/

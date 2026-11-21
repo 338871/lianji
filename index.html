@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>训练记录</title>
+  <meta name="description" content="训练记录是一个只做一件事的训练日历：点开日期，记下练过的部位，一眼看清这个月都练了什么。">
+  <meta name="theme-color" content="#f5f5f7">
+  <meta name="color-scheme" content="light dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="训练记录">
+  <meta name="mobile-web-app-capable" content="yes">
+  <script>
+    (function () {
+      try {
+        var raw = localStorage.getItem('lianji.settings.v1');
+        var settings = raw ? JSON.parse(raw) : {};
+        var theme = settings.theme || 'light';
+        if (theme === 'auto') {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+      } catch (error) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <main id="monthView">
+      <section class="month-head" aria-labelledby="monthTitle">
+        <div class="month-topline">
+          <button class="month-year" id="yearBtn" type="button" aria-label="查看年份总览">2026</button>
+          <div class="topbar-actions">
+            <button class="settings-btn" id="settingsBtn" type="button" aria-label="设置">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 7h9M17 7h3M4 17h3M11 17h9"/>
+                <circle cx="15" cy="7" r="2.2"/>
+                <circle cx="9" cy="17" r="2.2"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="month-title-row">
+          <button class="month-title" id="monthTitleBtn" type="button" aria-label="查看全年日历">
+            <span id="monthNum">11</span><span class="month-unit">月</span>
+            <svg class="month-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <button class="month-summary" id="monthSummaryBtn" type="button" aria-label="查看训练统计">
+            <span class="month-summary-label">本月训练</span>
+            <strong id="monthCount">0</strong>
+            <span class="month-summary-unit">天</span>
+          </button>
+          <nav class="month-nav" aria-label="切换月份">
+            <button class="month-nav-btn" id="prevMonth" type="button" aria-label="上个月">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+            </button>
+            <button class="month-nav-btn" id="nextMonth" type="button" aria-label="下个月">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </nav>
+        </div>
+      </section>
+
+      <section class="calendar-card" id="calendarCard" aria-label="训练记录日历">
+        <div class="weekdays" id="weekdays" aria-hidden="true"></div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </section>
+
+      <section class="today-panel" aria-labelledby="todayTitle">
+        <div class="today-copy">
+          <p class="today-eyebrow" id="todayEyebrow">今天</p>
+          <h2 class="today-title" id="todayTitle">今天还没有训练</h2>
+          <p class="today-meta" id="todayMeta">练完记一笔，日历会替你记住</p>
+        </div>
+        <button class="today-action" id="logTodayBtn" type="button">
+          <span class="today-action-icon" id="todayActionIcon" aria-hidden="true">+</span>
+          <span id="todayActionText">记录</span>
+        </button>
+      </section>
+
+      <section class="day-detail" id="dayDetail" hidden aria-live="polite">
+        <p class="day-detail-note" id="dayDetailNote"></p>
+        <div class="day-photos" id="dayPhotos"></div>
+      </section>
+    </main>
+
+    <section class="year-view" id="yearView" aria-labelledby="yearTitle" hidden>
+      <div class="year-topbar">
+        <button class="year-back" id="closeYearBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+          <span>月历</span>
+        </button>
+      </div>
+      <div class="year-title-row">
+        <h1 class="year-title" id="yearTitle">2026</h1>
+        <nav class="year-nav" aria-label="切换年份">
+          <button class="year-nav-btn" id="prevYear" type="button" aria-label="上一年">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+          </button>
+          <button class="year-nav-btn" id="nextYear" type="button" aria-label="下一年">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </nav>
+      </div>
+      <div class="year-tools">
+        <div class="year-toolbar">
+          <p class="year-hint">点按月份查看训练记录</p>
+          <button class="year-filter-btn" id="yearFilterBtn" type="button" aria-expanded="false" aria-controls="yearFilterPopover">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v5l-4 2v-7L4 5z"/></svg>
+            <span>筛选</span>
+            <b id="yearFilterCount" hidden>0</b>
+          </button>
+        </div>
+        <div class="year-filter-popover" id="yearFilterPopover" hidden>
+          <div class="filter-popover-head">
+            <h3>筛选训练部位</h3>
+            <button id="yearFilterDone" type="button">完成</button>
+          </div>
+          <div class="year-filter" id="yearFilter" role="group" aria-label="筛选训练部位"></div>
+        </div>
+      </div>
+      <div class="year-grid" id="yearGrid"></div>
+    </section>
+
+    <section class="curve-view" id="curveView" aria-labelledby="curveTitle" hidden>
+      <div id="curveMain">
+        <div class="curve-top">
+          <button class="curve-title" id="curveTitleBtn" type="button" aria-label="查看全年曲线">
+            <span id="curveTitle">训练数据</span>
+            <svg class="curve-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <button class="settings-btn" id="curveSettingsBtn" type="button" aria-label="设置">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h9M17 7h3M4 17h3M11 17h9"/>
+              <circle cx="15" cy="7" r="2.2"/>
+              <circle cx="9" cy="17" r="2.2"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="curve-controls">
+          <div class="segmented curve-period" id="curvePeriodSegment" role="group" aria-label="曲线周期">
+            <button type="button" data-period="month" aria-pressed="true">月</button>
+            <button type="button" data-period="30" aria-pressed="false">近30天</button>
+            <button type="button" data-period="year" aria-pressed="false">年</button>
+          </div>
+        </div>
+
+        <div class="curve-chart-card">
+          <div class="curve-chart-head">
+            <span>训练值</span>
+            <button class="curve-month-switch" id="curveMonthBtn" type="button" aria-expanded="false" disabled>
+              <span id="curveMonthLabel">11月</span>
+              <svg class="pie-month-caret curve-month-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+          </div>
+          <p class="curve-range-label" id="curveRangeLabel"></p>
+          <div class="pie-month-popover curve-month-popover" id="curveMonthPopover" hidden>
+            <div class="pie-month-head">
+              <div class="month-picker-year">
+                <button class="month-year-step" id="curvePrevYear" type="button" aria-label="上一年">‹</button>
+                <span id="curvePickerYear">2026年</span>
+                <button class="month-year-step" id="curveNextYear" type="button" aria-label="下一年">›</button>
+              </div>
+              <button id="curveMonthDone" type="button">完成</button>
+            </div>
+            <div class="pie-month-grid" id="curveMonthGrid"></div>
+          </div>
+          <div class="curve-chart-wrap">
+            <svg id="curveChart" viewBox="0 0 340 210" role="img" aria-label="训练曲线"></svg>
+            <p class="curve-empty" id="curveEmpty" hidden>这段时间还没有训练记录</p>
+          </div>
+          <div class="curve-month-groups" id="curveMonthGroups"></div>
+          <p class="curve-legend" id="curveLegend">柱：当天训练 · 线：残留</p>
+          <p class="curve-tip" id="curveTip"></p>
+        </div>
+
+        <section class="part-pie-card" aria-labelledby="partPieTitle">
+          <div class="part-pie-head">
+            <h2 id="partPieTitle">部位占比</h2>
+            <button class="pie-month-btn" id="pieMonthBtn" type="button" aria-expanded="false" disabled>
+              <span id="partPiePeriod">近30天</span>
+              <svg class="pie-month-caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+          </div>
+          <div class="pie-month-popover" id="pieMonthPopover" hidden>
+            <div class="pie-month-head">
+              <div class="month-picker-year">
+                <button class="month-year-step" id="piePrevYear" type="button" aria-label="上一年">‹</button>
+                <span id="pieMonthYear">2026年</span>
+                <button class="month-year-step" id="pieNextYear" type="button" aria-label="下一年">›</button>
+              </div>
+              <button id="pieMonthDone" type="button">完成</button>
+            </div>
+            <div class="pie-month-grid" id="pieMonthGrid"></div>
+          </div>
+          <p class="part-pie-sub">按训练次数统计</p>
+          <div class="pie-range" id="pieRange" role="group" aria-label="统计范围">
+            <button type="button" class="pie-range-btn" data-range="30" aria-pressed="true">近30天</button>
+            <button type="button" class="pie-range-btn" data-range="90" aria-pressed="false">近90天</button>
+            <button type="button" class="pie-range-btn" data-range="365" aria-pressed="false">近1年</button>
+            <button type="button" class="pie-range-btn" data-range="month" aria-pressed="false">月份</button>
+          </div>
+          <div class="part-pie-body">
+            <div class="pie-chart-wrap">
+              <svg id="pieChart" viewBox="0 0 360 250" role="img" aria-label="部位占比饼图"></svg>
+              <div class="pie-center">
+                <strong id="pieTotal">0</strong>
+                <span>次</span>
+              </div>
+            </div>
+          </div>
+          <p class="part-pie-caption" id="pieCaption"></p>
+        </section>
+
+        <section class="timeline-card" aria-labelledby="timelineTitle">
+          <div class="timeline-card-head">
+            <div>
+              <h2 id="timelineTitle">部位训练日期</h2>
+              <p id="timelineCaption">近30天 · 从早到晚</p>
+            </div>
+            <div class="timeline-range" id="timelineRange" role="group" aria-label="训练日期范围">
+              <button type="button" data-range="30" aria-pressed="true">近30天</button>
+              <button type="button" data-range="month" aria-pressed="false">本月</button>
+            </div>
+          </div>
+          <div class="timeline-table-wrap">
+            <table class="timeline-table">
+              <thead id="timelineTableHead"></thead>
+              <tbody id="timelineTableBody"></tbody>
+              <tfoot id="timelineTableFoot"></tfoot>
+            </table>
+          </div>
+          <p class="timeline-empty" id="timelineEmpty" hidden>这段时间还没有训练记录。</p>
+        </section>
+      </div>
+
+      <section class="curve-overview" id="curveOverview" aria-labelledby="curveOverviewYear" hidden>
+        <div class="year-topbar">
+          <button class="year-back" id="curveOverviewBack" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+            <span>数据</span>
+          </button>
+        </div>
+        <div class="year-title-row">
+          <h1 class="year-title" id="curveOverviewYear">2026</h1>
+          <nav class="year-nav" aria-label="切换年份">
+            <button class="year-nav-btn" id="curveOverviewPrevYear" type="button" aria-label="上一年">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+            </button>
+            <button class="year-nav-btn" id="curveOverviewNextYear" type="button" aria-label="下一年">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </nav>
+        </div>
+        <p class="year-hint">点按月份查看当月曲线</p>
+        <div class="curve-overview-grid" id="curveOverviewGrid"></div>
+      </section>
+    </section>
+
+    <section class="profile-view" id="profileView" aria-labelledby="profileTitle" hidden>
+      <div class="profile-top">
+        <div>
+          <h1 class="profile-title" id="profileTitle">我的</h1>
+        </div>
+        <button class="settings-btn" id="profileSettingsBtn" type="button" aria-label="设置">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h9M17 7h3M4 17h3M11 17h9"/>
+            <circle cx="15" cy="7" r="2.2"/>
+            <circle cx="9" cy="17" r="2.2"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="profile-summary">
+        <div class="profile-metric">
+          <span>总训练天数</span>
+          <strong id="metricTotal">0</strong>
+          <small>天</small>
+        </div>
+        <div class="profile-metric">
+          <span>本月训练</span>
+          <strong id="metricMonth">0</strong>
+          <small>天</small>
+        </div>
+        <div class="profile-metric">
+          <span>本年训练</span>
+          <strong id="metricYear">0</strong>
+          <small>天</small>
+        </div>
+        <div class="profile-metric">
+          <span>最近 30 天</span>
+          <strong id="metricRecent">0</strong>
+          <small>天</small>
+        </div>
+      </div>
+
+      <section class="profile-card">
+        <div class="profile-card-head">
+          <h2>部位统计</h2>
+          <span>按总次数</span>
+        </div>
+        <div class="profile-parts" id="profileParts"></div>
+      </section>
+
+      <section class="profile-card">
+        <div class="profile-card-head">
+          <h2>最近训练</h2>
+          <span id="profileRecentCount">近 7 天</span>
+        </div>
+        <div class="profile-recent" id="profileRecent"></div>
+      </section>
+
+      <section class="profile-card">
+        <button class="profile-photo-toggle" id="profilePhotoToggle" type="button" aria-haspopup="dialog">
+          <div class="profile-photo-toggle-copy">
+            <h2>记录照片</h2>
+            <p id="profilePhotoCount">0 张</p>
+          </div>
+          <svg class="setting-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </section>
+
+      <section class="profile-card part-notes-card">
+        <button class="part-notes-toggle" id="partNotesToggle" type="button" aria-haspopup="dialog">
+          <div class="part-notes-toggle-copy">
+            <h2>训练部位记录</h2>
+            <p id="partNotesSummary">记录每个部位的训练感受</p>
+          </div>
+          <svg class="setting-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <div class="part-notes-preview" id="partNotesPreview"></div>
+      </section>
+
+      <section class="profile-card profile-note-card">
+        <textarea class="profile-note-input" id="profileNoteInput" maxlength="1000" rows="2" placeholder="此处是训练笔记，最多纪录1000字"></textarea>
+      </section>
+    </section>
+  </div>
+
+  <nav class="view-switch" id="viewSwitch" aria-label="切换界面">
+    <button class="view-switch-btn" type="button" data-view="calendar" aria-pressed="true">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="16" rx="3"/>
+        <path d="M8 3v4M16 3v4M3 10h18"/>
+      </svg>
+      <span>日历</span>
+    </button>
+    <button class="view-switch-btn" type="button" data-view="curve" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 17l5-6 4 3 6-8 3 3"/>
+        <path d="M3 21h18"/>
+      </svg>
+      <span>数据</span>
+    </button>
+    <button class="view-switch-btn" type="button" data-view="profile" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="8" r="3.2"/>
+        <path d="M4.5 20c.8-4 4-6.2 7.5-6.2s6.7 2.2 7.5 6.2"/>
+      </svg>
+      <span>我的</span>
+    </button>
+  </nav>
+
+  <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+
+  <section class="entry-sheet sheet-panel" id="entrySheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-describedby="sheetDate" tabindex="-1" hidden>
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <div class="sheet-heading">
+        <p class="sheet-date" id="sheetDate"><span id="sheetDateText">2026年11月18日 · 周三</span><span class="today-badge" id="sheetTodayBadge" hidden>今天</span></p>
+        <h2 id="sheetTitle">练了哪些部位？</h2>
+      </div>
+      <button class="sheet-close" id="closeSheet" type="button" aria-label="关闭">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="part-tools">
+      <button class="part-edit-btn" id="partEditBtn" type="button">编辑部位</button>
+    </div>
+    <div class="part-grid" id="partGrid" role="group" aria-label="选择训练部位"></div>
+
+    <div class="part-editor" id="partEditor" hidden>
+      <div class="part-editor-head">
+        <span>部位名称</span>
+        <span>最多 8 个字</span>
+      </div>
+      <div class="part-editor-list" id="partEditorList"></div>
+      <button class="add-part-btn" id="addPartBtn" type="button">+ 添加部位</button>
+    </div>
+
+    <div class="entry-extras">
+      <section class="extra-block">
+        <div class="extra-head">
+          <h3>便签</h3>
+          <span id="noteCount">0/300</span>
+        </div>
+        <textarea class="note-input" id="noteInput" maxlength="300" rows="2" placeholder="记录今天的感受、重量或计划"></textarea>
+      </section>
+
+      <section class="extra-block">
+        <div class="extra-head">
+          <h3>照片</h3>
+          <span>仅保存在本机</span>
+        </div>
+        <input id="photoInput" type="file" accept="image/*" multiple hidden>
+        <div class="photo-grid" id="photoGrid"></div>
+        <button class="photo-add" id="photoAddBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="3"/>
+            <circle cx="12" cy="12" r="3.5"/>
+            <path d="M7 5l1.2-2h7.6L17 5"/>
+          </svg>
+          <span>添加照片</span>
+          <b id="photoCount">0/5</b>
+        </button>
+      </section>
+    </div>
+
+    <div class="sheet-footer">
+      <div class="selection-line">
+        <span id="selectionText" aria-live="polite">可多选</span>
+        <button class="clear-btn" id="clearBtn" type="button" hidden>清空记录</button>
+      </div>
+      <button class="save-btn" id="saveBtn" type="button" disabled>保存记录</button>
+    </div>
+  </section>
+
+  <section class="settings-sheet sheet-panel" id="settingsSheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1" hidden>
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <div class="sheet-heading">
+        <h2 id="settingsTitle">设置</h2>
+      </div>
+      <button class="sheet-close" id="closeSettings" type="button" aria-label="关闭设置">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="settings-body">
+      <h3 class="settings-section-title">外观</h3>
+      <section class="setting-group">
+        <div class="setting-head">
+          <h3>主题色</h3>
+          <span id="accentLabel">蓝色</span>
+        </div>
+        <div class="swatch-row" id="accentSwatches" role="group" aria-label="主题色"></div>
+      </section>
+
+      <section class="setting-group">
+        <div class="setting-head">
+          <h3>编辑模块</h3>
+          <span id="editorColorLabel">浅蓝</span>
+        </div>
+        <div class="dot-colors" id="editorColorSwatches" role="group" aria-label="编辑模块颜色"></div>
+      </section>
+
+      <section class="setting-group">
+        <div class="setting-head">
+          <h3>显示模式</h3>
+          <span>随时可改</span>
+        </div>
+        <div class="segmented" id="themeSegment" role="group" aria-label="外观">
+          <button type="button" data-setting="theme" data-value="light" aria-pressed="true">浅色</button>
+          <button type="button" data-setting="theme" data-value="dark" aria-pressed="false">深色</button>
+          <button type="button" data-setting="theme" data-value="auto" aria-pressed="false">跟随系统</button>
+        </div>
+      </section>
+
+      <section class="setting-group">
+        <div class="setting-head">
+          <h3>字号</h3>
+          <span id="fontSizeLabel">小</span>
+        </div>
+        <div class="segmented" id="fontSizeSegment" role="group" aria-label="字号">
+          <button type="button" data-setting="fontSize" data-value="small" aria-pressed="true">小</button>
+          <button type="button" data-setting="fontSize" data-value="medium" aria-pressed="false">中</button>
+          <button type="button" data-setting="fontSize" data-value="large" aria-pressed="false">大</button>
+        </div>
+      </section>
+
+      <section class="setting-group">
+        <button class="poem-entry" id="poemEditEntry" type="button" aria-haspopup="dialog">
+          <span class="poem-entry-copy">
+            <strong>编辑模块显示</strong>
+          </span>
+          <span class="poem-entry-count" id="poemEntryCount">6 句</span>
+          <svg class="setting-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </section>
+
+      <h3 class="settings-section-title">日历</h3>
+      <section class="setting-group">
+        <div class="setting-head">
+          <h3>每周开始</h3>
+          <span>日历排列</span>
+        </div>
+        <div class="segmented is-two" id="weekSegment" role="group" aria-label="每周开始">
+          <button type="button" data-setting="weekStart" data-value="monday" aria-pressed="true">周一</button>
+          <button type="button" data-setting="weekStart" data-value="sunday" aria-pressed="false">周日</button>
+        </div>
+      </section>
+
+      <section class="setting-group">
+        <div class="setting-head">
+          <h3>便签圆点</h3>
+          <span id="noteColorLabel">红色</span>
+        </div>
+        <div class="dot-colors" id="noteColorSwatches" role="group" aria-label="便签圆点颜色"></div>
+      </section>
+
+      <section class="setting-group">
+        <div class="setting-head">
+          <h3>照片圆点</h3>
+          <span id="imageColorLabel">黄色</span>
+        </div>
+        <div class="dot-colors" id="imageColorSwatches" role="group" aria-label="照片圆点颜色"></div>
+      </section>
+
+      <section class="setting-group">
+        <div class="setting-head">
+          <h3>年历标记</h3>
+          <span>全年视图</span>
+        </div>
+        <div class="segmented is-two" id="markSegment" role="group" aria-label="年历标记">
+          <button type="button" data-setting="recordMark" data-value="bar" aria-pressed="true">短杠</button>
+          <button type="button" data-setting="recordMark" data-value="dot" aria-pressed="false">圆点</button>
+        </div>
+      </section>
+
+      <h3 class="settings-section-title">训练</h3>
+      <section class="setting-group">
+        <div class="setting-head">
+          <h3>部位权重</h3>
+          <button class="setting-action" id="weightsToggle" type="button" aria-expanded="false">调整权重</button>
+        </div>
+        <p class="setting-note">仅影响曲线图中训练值</p>
+        <div class="weight-editor" id="weightEditor" hidden>
+          <div class="weight-editor-list" id="weightEditorList"></div>
+          <button class="reset-weights" id="resetWeights" type="button">恢复默认权重</button>
+        </div>
+      </section>
+
+      <section class="setting-group">
+        <div class="setting-head">
+          <h3>照片质量</h3>
+          <span id="photoQualityLabel">压缩</span>
+        </div>
+        <div class="segmented is-two" id="photoQualitySegment" role="group" aria-label="照片质量">
+          <button type="button" data-setting="photoQuality" data-value="compressed" aria-pressed="true">压缩</button>
+          <button type="button" data-setting="photoQuality" data-value="original" aria-pressed="false">原图高清</button>
+        </div>
+        <p class="setting-note">原图更清晰，但会占用更多存储空间</p>
+      </section>
+
+      <h3 class="settings-section-title">数据</h3>
+      <section class="setting-group">
+        <div class="setting-head">
+          <h3>备份与恢复</h3>
+          <span>包含记录、便签、照片</span>
+        </div>
+        <div class="data-actions">
+          <button class="data-btn" id="exportBackupBtn" type="button">导出备份</button>
+          <button class="data-btn" id="importBackupBtn" type="button">导入备份</button>
+          <input id="importBackupInput" type="file" accept="application/json,.json" hidden>
+        </div>
+        <p class="setting-note" id="storageUsage">正在读取存储占用…</p>
+        <button class="danger-action" id="clearAllDataBtn" type="button">清空全部数据</button>
+      </section>
+
+      <h3 class="settings-section-title">系统</h3>
+      <section class="setting-toggle">
+        <div class="setting-toggle-copy">
+          <h3>触感反馈</h3>
+          <p>点选部位和保存时轻轻震动</p>
+        </div>
+        <button class="switch" id="hapticsSwitch" type="button" role="switch" aria-checked="true" aria-label="触感反馈">
+          <span aria-hidden="true"></span>
+        </button>
+      </section>
+
+      <button class="setting-link" id="aboutLink" type="button">
+        <div class="setting-toggle-copy">
+          <h3>关于本应用</h3>
+          <p>免费说明、版本和致谢</p>
+        </div>
+        <svg class="setting-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </button>
+
+      <div class="settings-footer">
+        <button class="reset-settings" id="resetSettings" type="button">恢复默认</button>
+        <span>训练记录 2.6.0 · 设置只保存在本机</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="about-sheet" id="aboutSheet" role="dialog" aria-modal="true" aria-labelledby="aboutTitle" tabindex="-1" hidden>
+    <button class="about-close" id="aboutClose" type="button" aria-label="关闭关于">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="about-page">
+      <img class="about-page-icon" src="icons/icon-192.png" width="96" height="96" alt="训练记录图标">
+      <h1 class="about-page-title" id="aboutTitle">训练记录</h1>
+      <p class="about-page-version">版本 2.6.0</p>
+      <div class="about-page-copy">
+        <p>这是一款完全免费、无广告、无内购的训练记录工具。创作的初衷仅仅是为了每天的训练有迹可循。</p>
+        <p>希望它能陪你一路坚持，愿你每一次训练都有进步，拥有一个健康、活泼的身体。</p>
+      </div>
+      <a class="about-github" id="aboutGithub" href="https://github.com/338871/lianji">
+        <span>GitHub 项目地址</span>
+        <small>github.com/338871/lianji</small>
+      </a>
+    </div>
+  </section>
+
+  <section class="part-notes-sheet" id="partNotesSheet" role="dialog" aria-modal="true" aria-labelledby="partNotesTitle" tabindex="-1" hidden>
+    <button class="photo-gallery-close" id="partNotesClose" type="button" aria-label="关闭训练部位记录">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="part-notes-page">
+      <p class="photo-gallery-kicker">我的 · 训练部位记录</p>
+      <h1 class="part-notes-title" id="partNotesTitle">训练部位记录</h1>
+      <p class="part-notes-hint">点击部位，写下最多200字的记录。有文字的部位会显示在「我的」页面。</p>
+      <div class="part-notes-list" id="partNotesList"></div>
+    </div>
+  </section>
+
+  <section class="poem-editor-sheet" id="poemEditorSheet" role="dialog" aria-modal="true" aria-labelledby="poemEditorTitle" tabindex="-1" hidden>
+    <button class="photo-gallery-close" id="poemEditorClose" type="button" aria-label="关闭编辑模块显示">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="poem-editor-page">
+      <p class="photo-gallery-kicker">设置 · 编辑模块显示</p>
+      <h1 class="poem-editor-title" id="poemEditorTitle">编辑模块显示</h1>
+      <p class="poem-editor-hint">日历今天没有训练时，会从这里随机显示一句。</p>
+      <div class="poem-list" id="poemList"></div>
+      <div class="poem-actions">
+        <button type="button" class="poem-add" id="poemAddBtn">新增诗句</button>
+        <button type="button" class="poem-reset" id="poemResetBtn">恢复默认</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="photo-gallery-sheet" id="photoGallerySheet" role="dialog" aria-modal="true" aria-labelledby="photoGalleryTitle" tabindex="-1" hidden>
+    <button class="photo-gallery-close" id="photoGalleryClose" type="button" aria-label="关闭记录照片">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="photo-gallery-page">
+      <p class="photo-gallery-kicker">我的 · 记录照片</p>
+      <h1 class="photo-gallery-title" id="photoGalleryTitle">记录照片</h1>
+      <div class="profile-photo-monthbar">
+        <button id="profilePhotoPrevMonth" type="button" aria-label="上个月">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <button class="profile-photo-month-label" id="profilePhotoMonthBtn" type="button" aria-expanded="false"></button>
+        <button id="profilePhotoNextMonth" type="button" aria-label="下个月">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+      <div class="profile-photo-months" id="profilePhotoMonths" hidden></div>
+      <div class="profile-photo-groups" id="profilePhotoGroups"></div>
+      <p class="profile-empty" id="profilePhotoEmpty" hidden>这个月还没有照片。</p>
+    </div>
+  </section>
+
+  <section class="stats-sheet sheet-panel" id="statsSheet" role="dialog" aria-modal="true" aria-labelledby="statsTitle" tabindex="-1" hidden>
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <div class="sheet-head">
+      <div class="sheet-heading">
+        <h2 id="statsTitle">训练统计</h2>
+      </div>
+      <button class="sheet-close" id="closeStats" type="button" aria-label="关闭训练统计">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="stats-body">
+      <div class="segmented is-two stats-period" id="statsPeriodSegment" role="group" aria-label="统计周期">
+        <button type="button" data-period="month" aria-pressed="true">本月</button>
+        <button type="button" data-period="year" aria-pressed="false">本年</button>
+      </div>
+      <p class="stats-caption" id="statsCaption"></p>
+      <div class="stats-list" id="statsList"></div>
+    </div>
+  </section>
+
+  <div class="photo-viewer" id="photoViewer" role="dialog" aria-modal="true" aria-label="查看照片" hidden>
+    <button class="photo-viewer-close" id="photoViewerClose" type="button" aria-label="关闭照片">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <button class="photo-viewer-nav is-prev" id="photoViewerPrev" type="button" aria-label="上一张">‹</button>
+    <img id="photoViewerImg" alt="">
+    <button class="photo-viewer-nav is-next" id="photoViewerNext" type="button" aria-label="下一张">›</button>
+    <p class="photo-viewer-caption" id="photoViewerCaption"></p>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <span id="toastText"></span>
+    <button class="toast-action" id="toastAction" type="button" hidden></button>
+  </div>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
