@@ -73,7 +73,7 @@
 双击任意日期，直接打开当天编辑界面；单击只选中日期，下方编辑模块同步更新。
 
 <div align="center">
-  <img src="screenshots/calendar-outside.png" alt="日历与灰色日期训练记录" width="72%">
+  <img src="assets/screens/calendar.png" alt="日历与灰色日期训练记录" width="72%">
 </div>
 
 ### 记录可以很轻，也可以很完整
@@ -86,7 +86,7 @@
 - 训练笔记 1000 字，输入框缩短到约 90px 高
 
 <div align="center">
-  <img src="screenshots/entry-sheet.png" alt="训练编辑界面" width="58%">
+  <img src="assets/screens/editor.png" alt="训练编辑界面" width="58%">
 </div>
 
 ### 数据页：看见训练留下的形状
@@ -100,8 +100,11 @@
 - 数据页会记住上次的时间模式，关掉应用再打开仍然保留
 
 <div align="center">
-  <img src="screenshots/curve-view.png" alt="训练曲线与部位占比" width="46%">
-  <img src="screenshots/curve-30.png" alt="近30天曲线" width="46%">
+  <img src="assets/screens/data.png" alt="训练曲线与部位占比" width="68%">
+</div>
+
+<div align="center">
+  <img src="assets/screens/pie.png" alt="部位占比" width="52%">
 </div>
 
 ### 部位训练日期表
@@ -115,7 +118,7 @@
 - 不需要横向滑动，30 天一次展开
 
 <div align="center">
-  <img src="screenshots/data-timeline.png" alt="部位训练日期表" width="90%">
+  <img src="assets/screens/timeline.png" alt="部位训练日期表" width="90%">
 </div>
 
 ### 我的：留下训练之外的东西
@@ -127,8 +130,7 @@
 - 备份导出 / 导入，所有数据只在本机
 
 <div align="center">
-  <img src="screenshots/part-notes-card.png" alt="训练部位记录卡片" width="44%">
-  <img src="screenshots/part-notes-editor.png" alt="训练部位记录编辑" width="44%">
+  <img src="assets/screens/profile.png" alt="我的训练统计" width="62%">
 </div>
 
 ### 一些小心思
@@ -139,8 +141,7 @@
 - 训练部位权重下方注明「仅影响曲线图中训练值」
 
 <div align="center">
-  <img src="screenshots/calendar-poem.png" alt="随机诗句" width="46%">
-  <img src="screenshots/year-view.png" alt="年份总览" width="46%">
+  <img src="assets/screens/year.png" alt="全年训练总览" width="46%">
 </div>
 
 ## 本地优先
